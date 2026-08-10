@@ -1,0 +1,391 @@
+{
+  "name": "Paginated API to Clean Google Sheets",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1080,
+        -120
+      ],
+      "id": "702a07d8-ba94-4e9e-a450-5576deb2df3c",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1080,
+        80
+      ],
+      "id": "fa5f3f3e-4b67-43cc-bd65-a5762764b606",
+      "name": "Daily Schedule"
+    },
+    {
+      "parameters": {
+        "url": "https://dummyjson.com/users",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "limit",
+              "value": "25"
+            }
+          ]
+        },
+        "options": {
+          "pagination": {
+            "pagination": {
+              "paginationMode": "updateAParameterInEachRequest",
+              "parameters": {
+                "parameters": [
+                  {
+                    "type": "qs",
+                    "name": "skip",
+                    "value": "={{ $pageCount * 25 }}"
+                  }
+                ]
+              },
+              "paginationCompleteWhen": "other",
+              "completeExpression": "={{ $response.body.skip + $response.body.limit >= $response.body.total }}",
+              "limitPagesFetched": true,
+              "maxRequests": 20,
+              "requestInterval": 100
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -820,
+        -20
+      ],
+      "id": "dc92dad7-3043-44ed-8bdd-f48948d7ad5d",
+      "name": "Fetch All User Pages"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pages = $input.all();\nconst users = [];\n\nfor (const page of pages) {\n  const body = page.json?.body ?? page.json;\n\n  if (Array.isArray(body?.users)) {\n    users.push(...body.users);\n  } else if (Array.isArray(body)) {\n    users.push(...body);\n  }\n}\n\nreturn users.map(user => ({ json: user }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        -20
+      ],
+      "id": "2a20ab84-668a-4184-90e1-981b94016268",
+      "name": "Extract Users"
+    },
+    {
+      "parameters": {
+        "jsCode": "const clean = (value) => {\n  if (value === null || value === undefined) return '';\n  return String(value).trim().replace(/\\s+/g, ' ');\n};\n\nreturn $input.all().map(item => {\n  const u = item.json;\n\n  return {\n    json: {\n      ...u,\n      id: Number(u.id),\n      fullName: clean(`${u.firstName ?? ''} ${u.lastName ?? ''}`),\n      age: Number.isFinite(Number(u.age)) ? Number(u.age) : '',\n      gender: clean(u.gender).toLowerCase(),\n      company: clean(u.company?.name),\n      department: clean(u.company?.department),\n      jobTitle: clean(u.company?.title),\n      country: clean(u.address?.country),\n      role: clean(u.role).toLowerCase(),\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -300,
+        -20
+      ],
+      "id": "6f2f170d-ee76-481d-842b-bf8da7cf21e3",
+      "name": "Normalize"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Security-by-whitelist: only these fields are allowed to leave this node.\n// Everything else is removed automatically, including email, phone,\n// password, SSN, bank, crypto, address, coordinates, IP/MAC/user-agent,\n// usernames and other source-only fields.\n\nconst allowedFields = [\n  'id',\n  'fullName',\n  'age',\n  'gender',\n  'company',\n  'department',\n  'jobTitle',\n  'country',\n  'role',\n];\n\nreturn $input.all().map(item => ({\n  json: Object.fromEntries(\n    allowedFields.map(key => [key, item.json[key] ?? ''])\n  )\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        -20
+      ],
+      "id": "bc1eed22-505d-49c2-b04c-2031cea67616",
+      "name": "Remove Sensitive Data"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seen = new Set();\nconst output = [];\n\nfor (const item of $input.all()) {\n  const id = item.json.id;\n\n  if (id === null || id === undefined || id === '') continue;\n\n  const key = String(id);\n  if (seen.has(key)) continue;\n\n  seen.add(key);\n  output.push(item);\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -20
+      ],
+      "id": "74388db5-f3fc-436c-925f-6d0b8f0dd5d1",
+      "name": "Deduplicate by ID"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "PASTE_GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 0,
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json.id }}",
+            "fullName": "={{ $json.fullName }}",
+            "age": "={{ $json.age }}",
+            "gender": "={{ $json.gender }}",
+            "company": "={{ $json.company }}",
+            "department": "={{ $json.department }}",
+            "jobTitle": "={{ $json.jobTitle }}",
+            "country": "={{ $json.country }}",
+            "role": "={{ $json.role }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "fullName",
+              "displayName": "fullName",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "age",
+              "displayName": "age",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "gender",
+              "displayName": "gender",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "department",
+              "displayName": "department",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "jobTitle",
+              "displayName": "jobTitle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "country",
+              "displayName": "country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        500,
+        -20
+      ],
+      "id": "4f8c7953-37f7-48c8-8eb0-74b1ce8be45a",
+      "name": "Google Sheets - Upsert Users",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\n\nreturn [{\n  json: {\n    status: 'success',\n    recordsWrittenOrUpdated: rows.length,\n    source: 'DummyJSON Users',\n    piiPolicy: 'whitelist-only',\n    dedupeKey: 'id',\n    finishedAt: new Date().toISOString(),\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        -20
+      ],
+      "id": "e31d1bea-f19e-4ee0-af87-c6bae302500b",
+      "name": "Run Summary"
+    },
+    {
+      "parameters": {
+        "content": "## Setup\n\n1. Create a Google Sheet.\n2. Put these headers in row 1, exactly:\n\n`id | fullName | age | gender | company | department | jobTitle | country | role`\n\n3. Open **Google Sheets - Upsert Users**.\n4. Select your Google Sheets credential.\n5. Replace `PASTE_GOOGLE_SHEET_ID_HERE` with the spreadsheet ID.\n6. The workflow targets the first tab (`gid=0`).\n7. Test with **Manual Trigger**.\n8. Publish/activate to enable the daily 07:00 schedule.\n\nThe PII cleaning node uses an allowlist, so source fields not explicitly allowed cannot reach Google Sheets.",
+        "height": 380,
+        "width": 410
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        420,
+        -500
+      ],
+      "id": "92e8f0c3-5f7b-4fb2-a8e9-2935e9e4bca3",
+      "name": "Setup Notes"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch All User Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "Fetch All User Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch All User Pages": {
+      "main": [
+        [
+          {
+            "node": "Extract Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Users": {
+      "main": [
+        [
+          {
+            "node": "Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize": {
+      "main": [
+        [
+          {
+            "node": "Remove Sensitive Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Sensitive Data": {
+      "main": [
+        [
+          {
+            "node": "Deduplicate by ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deduplicate by ID": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Upsert Users",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Upsert Users": {
+      "main": [
+        [
+          {
+            "node": "Run Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Berlin"
+  },
+  "tags": []
+}
