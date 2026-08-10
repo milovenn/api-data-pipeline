@@ -2,6 +2,8 @@
 
 A production-style n8n workflow that fetches paginated data from an external REST API, normalizes the records, removes sensitive fields, deduplicates the dataset, and synchronizes the cleaned output to Google Sheets.
 
+![n8n Workflow](screenshots/workflow.png)
+
 ## Overview
 
 This project demonstrates a common business automation pattern:
