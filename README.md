@@ -106,18 +106,6 @@ This pattern can be adapted for:
 - PII filtering
 - dashboard data sources
 
-## Repository Structure
-
-```text
-api-data-pipeline/
-├── workflow.json
-├── README.md
-├── .gitignore
-└── examples/
-    ├── sample-output.json
-    └── run-summary.json
-```
-
 ## Tech
 
 - n8n
