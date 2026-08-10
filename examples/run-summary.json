@@ -1,0 +1,8 @@
+{
+  "status": "success",
+  "recordsWrittenOrUpdated": 208,
+  "source": "DummyJSON Users",
+  "piiPolicy": "whitelist-only",
+  "dedupeKey": "id",
+  "finishedAt": "2026-08-10T10:00:00.000Z"
+}
