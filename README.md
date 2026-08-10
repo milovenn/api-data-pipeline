@@ -103,7 +103,7 @@ This pattern can be adapted for:
 - API-to-Sheets synchronization
 - data migration
 - scheduled data cleanup
-- PII filtering
+- sensitive-field filtering
 - dashboard data sources
 
 ## Tech
