@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "fullName": "Emily Johnson",
+    "age": 28,
+    "gender": "female",
+    "company": "Example Industries",
+    "department": "Engineering",
+    "jobTitle": "Sales Manager",
+    "country": "United States",
+    "role": "admin"
+  },
+  {
+    "id": 2,
+    "fullName": "Michael Williams",
+    "age": 35,
+    "gender": "male",
+    "company": "Sample Labs",
+    "department": "Support",
+    "jobTitle": "Support Specialist",
+    "country": "Canada",
+    "role": "user"
+  }
+]
