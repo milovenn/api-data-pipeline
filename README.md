@@ -1,10 +1,6 @@
 <div align="center">
 
-<img src="./assets/api-data-pipeline-banner.svg" alt="API Data Pipeline banner" width="1200">
-
-# API Data Pipeline
-
-**Fetch paginated REST API data, keep an explicit set of fields, and sync records to Google Sheets with n8n.**
+<h1><img src="./assets/api-data-pipeline-banner.svg" alt="API Data Pipeline. Fetch paginated REST API data, keep an explicit set of fields, and sync records to Google Sheets with n8n." width="1200"></h1>
 
 [![MIT License](https://img.shields.io/badge/License-MIT-6366f1?style=for-the-badge&labelColor=18181b)](./LICENSE)
 [![n8n workflow](https://img.shields.io/badge/n8n-Workflow-6366f1?style=for-the-badge&labelColor=18181b&logo=n8n&logoColor=white)](https://docs.n8n.io/build/manage-workflows/export-and-import/)
